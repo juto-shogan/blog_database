@@ -21,24 +21,109 @@ CREATE TABLE IF NOT EXISTS public.users
 (
     user_id bigserial NOT NULL,
     username character varying(255) NOT NULL,
-    email character varying(255),
+    email character varying(255) NOT NULL,
     password_hash character varying(255) NOT NULL,
     registration_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT pk_user_id PRIMARY KEY (user_id)
+    CONSTRAINT pk_user_id PRIMARY KEY (user_id),
+    CONSTRAINT uq_email UNIQUE (email),
+    CONSTRAINT uq_username UNIQUE (username)
 );
 
 COMMENT ON TABLE public.users
     IS 'user table';
 
+COMMENT ON CONSTRAINT uq_email ON public.users
+    IS 'unique emails ';
+COMMENT ON CONSTRAINT uq_username ON public.users
+    IS 'unique username';
+
+CREATE TABLE IF NOT EXISTS public.comments
+(
+    comment_id bigserial NOT NULL,
+    post_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    comment_content text NOT NULL,
+    comment_date timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_comment_id PRIMARY KEY (comment_id)
+);
+
+COMMENT ON TABLE public.comments
+    IS 'table for comments';
+
+CREATE TABLE IF NOT EXISTS public.categories
+(
+    category_id bigserial NOT NULL,
+    category_name character varying(255) NOT NULL,
+    CONSTRAINT pk_cat_id PRIMARY KEY (category_id)
+);
+
+CREATE TABLE IF NOT EXISTS public."postCategories"
+(
+    post_id bigint NOT NULL,
+    category_id bigint NOT NULL
+);
+
+COMMENT ON TABLE public."postCategories"
+    IS 'Junction Table
+';
+
 ALTER TABLE IF EXISTS public.posts
     ADD CONSTRAINT fk_user_id FOREIGN KEY (used_id)
     REFERENCES public.users (user_id) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE NO ACTION
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
     NOT VALID;
 
 COMMENT ON CONSTRAINT fk_user_id ON public.posts
     IS 'foreign key reference the user tables user_id';
+
+
+
+ALTER TABLE IF EXISTS public.comments
+    ADD CONSTRAINT fk_post_id FOREIGN KEY (post_id)
+    REFERENCES public.posts (post_id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+COMMENT ON CONSTRAINT fk_post_id ON public.comments
+    IS 'foreign key referencing the post_id';
+
+
+
+ALTER TABLE IF EXISTS public.comments
+    ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id)
+    REFERENCES public.users (user_id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+COMMENT ON CONSTRAINT fk_user_id ON public.comments
+    IS 'foreign key referencing user_id';
+
+
+
+ALTER TABLE IF EXISTS public."postCategories"
+    ADD CONSTRAINT fk_post_id FOREIGN KEY (post_id)
+    REFERENCES public.posts (post_id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+COMMENT ON CONSTRAINT fk_post_id ON public."postCategories"
+    IS 'foreign key post_id';
+
+
+
+ALTER TABLE IF EXISTS public."postCategories"
+    ADD CONSTRAINT fk_cat_id FOREIGN KEY (category_id)
+    REFERENCES public.categories (category_id) MATCH SIMPLE
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+    NOT VALID;
+
+COMMENT ON CONSTRAINT fk_cat_id ON public."postCategories"
+    IS 'foreign key referencing category_id';
 
 
 END;
