@@ -6,7 +6,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.posts
 (
     post_id bigserial NOT NULL,
-    used_id bigint NOT NULL,
+    user_id bigint NOT NULL,
     title character varying NOT NULL,
     content text NOT NULL,
     creation_date timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.users
     user_id bigserial NOT NULL,
     username character varying(255) NOT NULL,
     email character varying(255) NOT NULL,
-    password_hash character varying(255) NOT NULL,
+    password_hash text NOT NULL,
     registration_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_user_id PRIMARY KEY (user_id),
     CONSTRAINT uq_email UNIQUE (email),
@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.comments
     user_id bigint NOT NULL,
     comment_content text NOT NULL,
     comment_date timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    parent_comment_id bigint, -- New column for hierarchical comments
     CONSTRAINT pk_comment_id PRIMARY KEY (comment_id)
 );
 
@@ -54,25 +55,27 @@ CREATE TABLE IF NOT EXISTS public.categories
 (
     category_id bigserial NOT NULL,
     category_name character varying(255) NOT NULL,
-    CONSTRAINT pk_cat_id PRIMARY KEY (category_id)
+    CONSTRAINT pk_cat_id PRIMARY KEY (category_id),
+    CONSTRAINT uq_cat_name UNIQUE (category_name)
 );
 
 CREATE TABLE IF NOT EXISTS public."postCategories"
 (
     post_id bigint NOT NULL,
-    category_id bigint NOT NULL
+    category_id bigint NOT NULL,
+    CONSTRAINT pk_post_category PRIMARY KEY (post_id, category_id) -- Add compound Primary Key
+
 );
 
 COMMENT ON TABLE public."postCategories"
-    IS 'Junction Table
-';
+    IS 'Junction Table for Posts and Categories'
+;
 
 ALTER TABLE IF EXISTS public.posts
-    ADD CONSTRAINT fk_user_id FOREIGN KEY (used_id)
+    ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id)
     REFERENCES public.users (user_id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE CASCADE
-    NOT VALID;
+    ON DELETE CASCADE;
 
 COMMENT ON CONSTRAINT fk_user_id ON public.posts
     IS 'foreign key reference the user tables user_id';
@@ -80,11 +83,10 @@ COMMENT ON CONSTRAINT fk_user_id ON public.posts
 
 
 ALTER TABLE IF EXISTS public.comments
-    ADD CONSTRAINT fk_post_id FOREIGN KEY (post_id)
-    REFERENCES public.posts (post_id) MATCH SIMPLE
+    ADD CONSTRAINT fk_parent_comment_id FOREIGN KEY (parent_comment_id)
+    REFERENCES public.comments (comment_id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE CASCADE
-    NOT VALID;
+    ON DELETE CASCADE;
 
 COMMENT ON CONSTRAINT fk_post_id ON public.comments
     IS 'foreign key referencing the post_id';
@@ -95,8 +97,7 @@ ALTER TABLE IF EXISTS public.comments
     ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id)
     REFERENCES public.users (user_id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE CASCADE
-    NOT VALID;
+    ON DELETE CASCADE;
 
 COMMENT ON CONSTRAINT fk_user_id ON public.comments
     IS 'foreign key referencing user_id';
@@ -107,8 +108,7 @@ ALTER TABLE IF EXISTS public."postCategories"
     ADD CONSTRAINT fk_post_id FOREIGN KEY (post_id)
     REFERENCES public.posts (post_id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE CASCADE
-    NOT VALID;
+    ON DELETE CASCADE;
 
 COMMENT ON CONSTRAINT fk_post_id ON public."postCategories"
     IS 'foreign key post_id';
@@ -119,8 +119,7 @@ ALTER TABLE IF EXISTS public."postCategories"
     ADD CONSTRAINT fk_cat_id FOREIGN KEY (category_id)
     REFERENCES public.categories (category_id) MATCH SIMPLE
     ON UPDATE CASCADE
-    ON DELETE CASCADE
-    NOT VALID;
+    ON DELETE CASCADE;
 
 COMMENT ON CONSTRAINT fk_cat_id ON public."postCategories"
     IS 'foreign key referencing category_id';
